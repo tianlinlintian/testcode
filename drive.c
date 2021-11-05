@@ -3432,27 +3432,5 @@ NTSTATUS MyCreateNamedPipe(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     //WRITE_DAC 
     return g_OriginalCreateNamedPipe(DeviceObject, Irp);
 }
-//目前已经过滤例程：
-//NtCreateFile--------DispatchCreate 过滤
-//NtCreateNamedPipeFile--------DispatchCreateNamedPipe  hook
-//NtCloseHandle--------DispatchClose
-//NtReadFile--------DispatchRead
-//NtWriteFile--------DispatchWrite
-//NtQueryInformationFile--------DispatchQueryInformation
-//NtSetInformationFile--------DispatchSetInformation   过滤
-//NtShutdownSystem--------DispatchShutdown
-//NtLockFile / NtUnlockFile--------DispatchLockControl
-//NtCreateMailSlotFlie--------DispatchCreateMailslot
-//NtQuerySecurityObject--------DispatchQuerySecurity
-//NtSetSecurityObject--------DispatchSetSecurity  过滤
-//NtQueryEaFile--------DispatchQueryEA
-//NtFlushBuffersFile--------DispatchFlushBuffers
-//NtQueryVolumeInformationFile--------DispatchQueryVolumeInformation
-//NtSetVolumeInformationFile--------DispatchSetVolumeInformation
-//NtQueryDirectoryFile--------DispatchDirectoryControl
-//Ntfscontrolfile--------DispatchFileSystemControl
-//NtDeviceIoControlFile--------DispatchDeviceIOControl
-//NtQueryQuotaInformationFile--------DispatchQueryQuota
-//NtSetQuotaInformationFile--------DispatchSetQuota
 
 
