@@ -4,7 +4,7 @@
 #include <ntdef.h>
 #include <wdm.h>
 #include<ntstatus.h >
-#include "h.h"
+#include "drive.h"
 #include <fltKernel.h>
 #include <dontuse.h>
 #pragma comment(lib, "fltMgr.lib")
@@ -1202,12 +1202,7 @@ FsfCreate(
     ULONG SDesiredAccess = (DesiredAccess - GDesiredAccess) & 0xff0000;
     // 文件请求的对特定对象的访问权限  在内核下我们不需要关注这个
     ULONG ODesiredAccess = DesiredAccess - GDesiredAccess - SDesiredAccess;
-    //DbgPrint("666   %S\n", IoStackLocation->FileObject->FileName.Buffer);
-    //DbgPrint("zzzzzzz   %x\n", ODesiredAccess);
-    //DbgPrint("zzzzzzz   %x\n", GDesiredAccess);
 
-    //DbgPrint("zzzzzzz   %x\n", SDesiredAccess);
-    //DbgPrint("Mode    %x\n", Mode);
 
     ULONG DIRECTORY = 0;
     if (CreateDisposition2 >= FILE_DIRECTORY_FILE &&
@@ -1215,8 +1210,42 @@ FsfCreate(
     {
         DIRECTORY = 1;
     }
-    //  DbgPrint("DIRECTORY %d createflag %d \n", DIRECTORY, createflag);
-      //只关注任意目录创建
+    //任意文件写入|创建  无用
+    //if (save && Mode == UserMode&& createflag&& DIRECTORY==0
+    //    &&(SDesiredAccess != SYNCHRONIZE && SDesiredAccess != READ_CONTROL && SDesiredAccess != (READ_CONTROL | SYNCHRONIZE))
+    //    && ODesiredAccess != FILE_READ_DATA
+    //    && ODesiredAccess != FILE_READ_DATA | FILE_READ_ATTRIBUTES
+    //    && ODesiredAccess != FILE_READ_DATA | FILE_READ_EA
+    //    && ODesiredAccess != FILE_READ_ATTRIBUTES
+    //    && ODesiredAccess != FILE_READ_EA
+    //    && ODesiredAccess != FILE_READ_EA | FILE_READ_ATTRIBUTES
+    //    && GDesiredAccess != GENERIC_READ)
+    //{
+    //    //获取当前线程上下文
+    //    SeCaptureSubjectContext(&ssc);
+    //    //锁定当前上下文
+    //    SeLockSubjectContext(&ssc);
+    //    //获取token
+    //    at = SeQuerySubjectContextToken(&ssc);
+    //    SeUnlockSubjectContext(&ssc);
+    //    SeReleaseSubjectContext(&ssc);
+    //    //判断当前token类型。在这里我们对模拟令牌不感兴趣  
+    //    ULONG ret2 = SeQueryInformationToken(at, TokenImpersonationLevel, &tksl);
+    //    if (ret2 == STATUS_SUCCESS)
+    //    {
+    //        IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    //        return Irp->IoStatus.Status;
+    //    }
+    //    //获取token级别
+    //    SeQueryInformationToken(at, TokenIntegrityLevel, &IntegrityLevel);
+    //    if (IntegrityLevel < 0x3000)
+    //    {
+    //        IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    //        return Irp->IoStatus.Status;
+    //    }
+    //   
+    //}
+     //任意目录创建
     if (save && Mode == UserMode
         && (DIRECTORY && createflag))//&& SDesiredAccess != (READ_CONTROL | SYNCHRONIZE)))
     {
@@ -1250,7 +1279,6 @@ FsfCreate(
 
         //检查安全描述符是否有效
         ULONG ret = 0;
-        //如果创建的目录所在的目录不存在 无法在内核中判断
         if (SecurityDescriptor == NULL)
         {
 
@@ -1286,9 +1314,6 @@ FsfCreate(
                     ODesiredAccess = ODesiredAccess / 10;
                 }
             }
-
-
-
             MYPORT_MESSAGE Msg2;
             MYPORT_MESSAGE Out2;
             memset(&Msg2, 0, sizeof(Msg2));
@@ -1305,37 +1330,12 @@ FsfCreate(
             strcpy(&Msg2.Data[260] + strlen(NAME) + 2, idstr);
             status = ZwRequestWaitReplyPort(hClientPort, (PPORT_MESSAGE)&Msg2, (PPORT_MESSAGE)&Out2);
 
-            //如果可以尝试利用则记录
-            if (Out.Data[0] == 0)
-            {
-                MyDbg("ZwRequestWaitReplyPort ok\n");
-            }
-            else if (Out.Data[0] != 0);
-            {
-
-                IO_STATUS_BLOCK StatusBlock = { 0 };
-                HANDLE filehand = 0;
-                PDWORD64 read = NULL;
-            }
         }
-
-
-        /*  if (Mode == UserMode)
-          {
-              ret = SeValidSecurityDescriptor(sizeof(SECURITY_DESCRIPTOR), SecurityDescriptor);
-          }
-          else if (Mode = KernelMode)
-          {
-              ret = SeValidSecurityDescriptor(sizeof(SECURITY_DESCRIPTOR), SecurityDescriptor);
-          }*/
 
         if (Mode == UserMode)
         {
             ret = SeValidSecurityDescriptor(sizeof(SECURITY_DESCRIPTOR), SecurityDescriptor);
-            /*if (!ret)
-            {
-                ret = RtlValidSecurityDescriptor(SecurityDescriptor);
-            }*/
+
         }
         if (!ret)
         {
@@ -1529,12 +1529,11 @@ FsfCreate(
         }
         SeUnlockSubjectContext(&ssc2);
     }
-    else if (save && (ODesiredAccess == FILE_READ_ATTRIBUTES && SDesiredAccess == DELETE && GDesiredAccess == 0)
+    //如果是删除不存在的文件或者移动不存在的文件或者设置不存在的文件的安全信息
+     if (save && (ODesiredAccess == FILE_READ_ATTRIBUTES && SDesiredAccess == DELETE && GDesiredAccess == 0)
         || (ODesiredAccess == FILE_READ_ATTRIBUTES && SDesiredAccess == 0x110000 && GDesiredAccess == 0)
         || (ODesiredAccess == 0 && SDesiredAccess == 0x40000 && GDesiredAccess == 0))
     {
-
-
         //获取当前线程上下文
         SeCaptureSubjectContext(&ssc);
         //锁定当前上下文
@@ -1557,10 +1556,6 @@ FsfCreate(
             IoCompleteRequest(Irp, IO_NO_INCREMENT);
             return Irp->IoStatus.Status;
         }
-        //DbgPrint("%S\n", IoStackLocation->FileObject->FileName.Buffer);
-        //SECURITY_DESCRIPTOR     SecurityDescripto;
-        //PSECURITY_DESCRIPTOR     SecurityDescriptor = &SecurityDescripto;
-        //ObGetObjectSecurity(IoStackLocation->FileObject, &SecurityDescriptor, &DaclDefaulted);
         ULONG ret = 0;
         //如果是删除不存在的文件没有必要检查安全描述符 只需要检查上层目录
         //if (SecurityDescriptor!=NULL)
@@ -1570,16 +1565,8 @@ FsfCreate(
 
         if (!ret)
         {
-
-            //  DbgPrint("%s\n", buf);
             char buf[0x400];
             GetPathByFileObject(IoStackLocation->FileObject, buf);
-            int flag = checkstr(buf, "Users\\ztl", 0, strlen("Users\\ztl"));
-            if (!flag)
-            {
-                flag = checkstr(buf, "Users\\Public", 0, strlen("Users\\Public"));
-            }
-
             //如果文件名无效但是我们可以在创建这么一个文件并且这次调用是DeleteFile则记录
             if (ODesiredAccess == FILE_READ_ATTRIBUTES && SDesiredAccess == DELETE && GDesiredAccess == 0
                 // && flag
@@ -1607,73 +1594,27 @@ FsfCreate(
                     pid = pid / 10;
                 }
                 strcpy(&Msg2.Data[260] + strlen(NAME) + 2, idstr);
-                //   KIRQL irql;
-               //    KeAcquireSpinLock(&my_spin_lock, &irql);
 
-                //   KeRaiseIrql(DISPATCH_LEVEL, &irql);
                 ZwRequestWaitReplyPort(hClientPort, (PPORT_MESSAGE)&Msg2, (PPORT_MESSAGE)&Out2);
-                //  KeLowerIrql(irql);
-         //         KeReleaseSpinLock(&my_spin_lock, irql);
-             //     DbgPrint("buf  %s\n", buf);
-                  //如果可以尝试利用则记录
-
-
-                //else if (Out.Data[0] == 0xff || Out.Data[0] == 0xf6)
-                //{
-                //    ULONG pid = PsGetProcessId(PROC);
-                //    //pid数字转字符串
-                //    CHAR idstr[6] = { 0 };
-                //    for (int t = 5; t != -1; t--)
-                //    {
-                //        idstr[t] = pid % 10 + '0';
-                //        pid = pid / 10;
-                //    }
-
-                //    IO_STATUS_BLOCK StatusBlock = { 0 };
-                //    HANDLE filehand = 0;
-                //    PDWORD64 read = NULL;
-                //    /*  if (save)
-                //      {
-                //          save = 0;*/
-                //    StatusBlock = createFile(L"\\??\\C:\\Users\\ztl\\Desktop\\BoomUsersCL2.txt", GENERIC_ALL, FILE_SHARE_VALID_FLAGS, FILE_OPEN_IF, 0, &filehand//保存句柄
-                //    );
-                //    /* save = 1;
-                //     }*/
-                //    INT ret = 0;
-                //    while (ret != STATUS_END_OF_FILE)
-                //    {
-                //        CHAR BUF[1024];
-                //        ret = ZwReadFile(filehand, NULL, NULL, NULL, &StatusBlock, BUF, 1024, NULL, NULL);
-                //    }
-                //    ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, " boomboomboom!!!\r\n", sizeof(" boomboomboom!!!\r\n"), NULL, NULL);
-                //    ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "   不存在的文件名 : ", sizeof("   不存在的文件名 : "), NULL, NULL);
-                //    ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, buf, strnlen(buf, 500), NULL, NULL);
-                //    ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "   进程名 :", sizeof("   进程名 :"), NULL, NULL);
-                //    ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, NAME, strnlen(NAME, 500), NULL, NULL);
-                //    ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "\r\n    进程id :", sizeof("\r\n    进程id :"), NULL, NULL);
-                //    ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, idstr, 6, NULL, NULL);
-                //    if (Out.Data[0] == 0xff)
-                //    {
-                //        ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "  可以直接设置符号链接 ", sizeof("  可以直接设置符号链接"), NULL, NULL);
-                //    }
-                //    else if (Out.Data[0] == 0xf6)
-                //    {
-                //        ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "  该文件所在目录 有写入权限但是有文件被独占 需要进一步分析", sizeof("  该文件所在目录 有写入权限但是有文件被独占 需要进一步分析"), NULL, NULL);
-                //    }
-                //    ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "\r\n", sizeof("\r\n"), NULL, NULL);
-
-                //    ZwClose(filehand);
-
-
-                //}
 
             }
             //RemoveDirectoryA 存在或不存在的文件或者move不存在的文件
             else if (ODesiredAccess == FILE_READ_ATTRIBUTES && SDesiredAccess == 0x110000 && GDesiredAccess == 0
-                && flag)
+                )
             {
-                char buf[0x400];
-                GetPathByFileObject(IoStackLocation->FileObject, buf);
+                MYPORT_MESSAGE Msg2;
+                MYPORT_MESSAGE Out2;
+                memset(&Msg2, 0, sizeof(Msg2));
+                memset(&Out2, 0, sizeof(Out2));
+
+                Msg2.Header.DataLength = MAX_DATA_LEN;   //如果长度过小，消息可能会被截断
+                Msg2.Header.TotalLength = (short)sizeof(MYPORT_MESSAGE);
+                strcpy(&Msg2.Data[2], buf);
+
+                Msg2.Data[0] = '@';
+                Msg2.Data[1] = '3';
+
+                strcpy(&Msg2.Data[260], NAME);
                 ULONG pid = PsGetProcessId(PROC);
                 //pid数字转字符串
                 CHAR idstr[6] = { 0 };
@@ -1682,33 +1623,11 @@ FsfCreate(
                     idstr[t] = pid % 10 + '0';
                     pid = pid / 10;
                 }
+                strcpy(&Msg2.Data[260] + strlen(NAME) + 2, idstr);
 
-                IO_STATUS_BLOCK StatusBlock = { 0 };
-                HANDLE filehand = 0;
-                PDWORD64 read = NULL;
-                /*  if (save)
-                  {
-                      save = 0;*/
-                StatusBlock = createFile(L"\\??\\C:\\Users\\ztl\\Desktop\\BoomUsersMove2.txt", GENERIC_ALL, FILE_SHARE_VALID_FLAGS, FILE_OPEN_IF, 0, &filehand//保存句柄
-                );
-                /*save = 1;
-            }*/
-                INT ret = 0;
-                while (ret != STATUS_END_OF_FILE)
-                {
-                    CHAR BUF[1024];
-                    ret = ZwReadFile(filehand, NULL, NULL, NULL, &StatusBlock, BUF, 1024, NULL, NULL);
-                }
-                ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, " boomboomboom!!!\r\n", sizeof(" boomboomboom!!!\r\n"), NULL, NULL);
-                ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "   不存在的文件名 :", sizeof("   不存在的文件名 :"), NULL, NULL);
-                ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, buf, strnlen(buf, 500), NULL, NULL);
-                ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "   进程名 :", sizeof("   进程名 :"), NULL, NULL);
-                ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, NAME, strnlen(NAME, 500), NULL, NULL);
-                ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "\r\n    进程id :", sizeof("\r\n    进程id :"), NULL, NULL);
-                ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, idstr, 6, NULL, NULL);
-                ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "\r\n", sizeof("\r\n"), NULL, NULL);
-                ZwClose(filehand);
+                ZwRequestWaitReplyPort(hClientPort, (PPORT_MESSAGE)&Msg2, (PPORT_MESSAGE)&Out2);
             }
+            //对不存在的文件设置安全信息
             else if (ODesiredAccess == 0 && SDesiredAccess == 0x40000 && GDesiredAccess == 0)
             {
                 MYPORT_MESSAGE Msg4;
@@ -1737,50 +1656,14 @@ FsfCreate(
                 //  Msg4.Data[MAX_DATA_LEN - 2] = IoStackLocation->Parameters.SetSecurity.SecurityInformation;
                 status = ZwRequestWaitReplyPort(hClientPort, (PPORT_MESSAGE)&Msg4, (PPORT_MESSAGE)&Out4);
 
-                //  ULONG pid = PsGetProcessId(PROC);
-                //  //pid数字转字符串
-                //  CHAR idstr[6] = { 0 };
-                //  for (int t = 5; t != -1; t--)
-                //  {
-                //      idstr[t] = pid % 10 + '0';
-                //      pid = pid / 10;
-                //  }
-
-                //  IO_STATUS_BLOCK StatusBlock = { 0 };
-                //  HANDLE filehand = 0;
-                //  PDWORD64 read = NULL;
-                //  /*  if (save)
-                //    {
-                //        save = 0;*/
-                //  StatusBlock = createFile(L"\\??\\C:\\Users\\ztl\\Desktop\\BoomSecurity2.txt", GENERIC_ALL, FILE_SHARE_VALID_FLAGS, FILE_OPEN_IF, 0, &filehand//保存句柄
-                //  );
-                //  /*  save = 1;
-                //}*/
-                //  INT ret = 0;
-                //  while (ret != STATUS_END_OF_FILE)
-                //  {
-                //      CHAR BUF[1024];
-                //      ret = ZwReadFile(filehand, NULL, NULL, NULL, &StatusBlock, BUF, 1024, NULL, NULL);
-                //  }
-                //  ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, " boomboomboom!!!\r\n", sizeof(" boomboomboom!!!\r\n"), NULL, NULL);
-                //  ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "   不存在的文件名 :", sizeof("    不存在的文件名 :"), NULL, NULL);
-                //  ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, buf, strnlen(buf, 500), NULL, NULL);
-                //  ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "   进程名 :", sizeof("   进程名 :"), NULL, NULL);
-                //  ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, NAME, strnlen(NAME, 500), NULL, NULL);
-                //  ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "\r\n    进程id :", sizeof("\r\n    进程id :"), NULL, NULL);
-                //  ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, idstr, 6, NULL, NULL);
-                //  ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "\r\n", sizeof("\r\n"), NULL, NULL);
-                //  ZwClose(filehand);
             }
         }
 
         //ssc2是全局上下文变量，也就是测试用例的上下文而不是高权限上下文
     }
-
-    else if (save && Mode == KernelMode
-        //OBJ_FORCE_ACCESS_CHECK排除检查内核句柄
+     //Kernel file
+     if (save && Mode == KernelMode
         && Flage % 2 != SL_FORCE_ACCESS_CHECK
-        //SL_STOP_ON_SYMLINK排除检查符号链接
         && ((Flage / SL_STOP_ON_SYMLINK) % 2 == 0 || Flage == 0)
         && (SDesiredAccess != SYNCHRONIZE && SDesiredAccess != READ_CONTROL && SDesiredAccess != (READ_CONTROL | SYNCHRONIZE))
         && ODesiredAccess != FILE_READ_DATA
@@ -1921,8 +1804,7 @@ FsfCreate(
 
     }
     //如果在打开时删除文件
-
-    else if (save && Mode == UserMode &&
+     if (save && Mode == UserMode &&
         ODesiredAccess != FILE_READ_DATA
         && ODesiredAccess != FILE_READ_DATA | FILE_READ_ATTRIBUTES
         && ODesiredAccess != FILE_READ_DATA | FILE_READ_EA
@@ -2083,6 +1965,7 @@ FsfCreate(
         }
 
     }
+
     IoCompleteRequest(Irp, IO_NO_INCREMENT);
     return Irp->IoStatus.Status;
 }
@@ -3549,4 +3432,27 @@ NTSTATUS MyCreateNamedPipe(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     //WRITE_DAC 
     return g_OriginalCreateNamedPipe(DeviceObject, Irp);
 }
+//目前已经过滤例程：
+//NtCreateFile--------DispatchCreate 过滤
+//NtCreateNamedPipeFile--------DispatchCreateNamedPipe  hook
+//NtCloseHandle--------DispatchClose
+//NtReadFile--------DispatchRead
+//NtWriteFile--------DispatchWrite
+//NtQueryInformationFile--------DispatchQueryInformation
+//NtSetInformationFile--------DispatchSetInformation   过滤
+//NtShutdownSystem--------DispatchShutdown
+//NtLockFile / NtUnlockFile--------DispatchLockControl
+//NtCreateMailSlotFlie--------DispatchCreateMailslot
+//NtQuerySecurityObject--------DispatchQuerySecurity
+//NtSetSecurityObject--------DispatchSetSecurity  过滤
+//NtQueryEaFile--------DispatchQueryEA
+//NtFlushBuffersFile--------DispatchFlushBuffers
+//NtQueryVolumeInformationFile--------DispatchQueryVolumeInformation
+//NtSetVolumeInformationFile--------DispatchSetVolumeInformation
+//NtQueryDirectoryFile--------DispatchDirectoryControl
+//Ntfscontrolfile--------DispatchFileSystemControl
+//NtDeviceIoControlFile--------DispatchDeviceIOControl
+//NtQueryQuotaInformationFile--------DispatchQueryQuota
+//NtSetQuotaInformationFile--------DispatchSetQuota
+
 
