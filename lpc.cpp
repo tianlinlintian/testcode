@@ -646,7 +646,7 @@ BOOL IsDirectoryWrite(CHAR* filePath, ULONG type)
 
 #define BLUE "\033[0;32;34m"
 
-//传入要遍历的文件夹路径，删除该目录下的所有文件
+//传入要遍历的文件夹路径
 BOOL TraverseDirectory(wchar_t Dir[MAX_PATH], wchar_t Dir2[MAX_PATH])
 {
 	WIN32_FIND_DATA FindFileData;
@@ -686,7 +686,7 @@ BOOL TraverseDirectory(wchar_t Dir[MAX_PATH], wchar_t Dir2[MAX_PATH])
 				{
 					return 0;
 				} 
-				HANDLE hFile = CreateFile(DirAdd,      //第一个参数:路径
+				HANDLE hFile = CreateFileW(DirAdd,      //第一个参数:路径
 					DELETE,                       //打开方式:
 					0,                                  //共享模式:0为独占  
 					NULL,
@@ -695,7 +695,6 @@ BOOL TraverseDirectory(wchar_t Dir[MAX_PATH], wchar_t Dir2[MAX_PATH])
 					NULL);
 				if (hFile == INVALID_HANDLE_VALUE)
 				{
-
 					return 0;
 				}
 				CloseHandle(hFile);
@@ -703,7 +702,11 @@ BOOL TraverseDirectory(wchar_t Dir[MAX_PATH], wchar_t Dir2[MAX_PATH])
 			
 			if ((FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)    //如果不是文件夹
 			{
-				HANDLE hFILE = CreateFileA("C:\\Users\\ztl\\Desktop", DELETE, 0, NULL, OPEN_EXISTING, NULL, NULL);
+				WCHAR path[1000] = { 0 };
+				wcscpy(path, Dir);
+				wcscat(path, L"\\");
+				wcscat(path, FindFileData.cFileName);
+				HANDLE hFILE = CreateFileW(path, DELETE, 0, NULL, OPEN_EXISTING, NULL, NULL);
 				if (hFILE == INVALID_HANDLE_VALUE )
 				{
 					return 0;
