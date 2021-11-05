@@ -8,7 +8,7 @@
     
 使用姿势：   
 1 编译驱动和用户程序LpcServer   
-2 以systme权限启动LpcServer.exe   
+2 以system权限启动LpcServer.exe   
 3 安装并启动驱动   
 4 以medium权限启动一个名为test的进程,test.exe保持一直运行      
 
