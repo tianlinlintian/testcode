@@ -10,4 +10,4 @@
 编译后驱动和用户程序后，以systme权限启动LpcServer.exe,然后安装并启动驱动，最后以medium权限启动一个名为test的进程,test.exe必须一直运行     
 
 
-
+注：卸载驱动蓝屏
