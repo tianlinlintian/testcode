@@ -4,7 +4,7 @@
 #include <ntdef.h>
 #include <wdm.h>
 #include<ntstatus.h >
-#include "drive.h"
+#include "h.h"
 #include <fltKernel.h>
 #include <dontuse.h>
 #pragma comment(lib, "fltMgr.lib")
@@ -1209,7 +1209,6 @@ FsfCreate(
     //DbgPrint("zzzzzzz   %x\n", SDesiredAccess);
     //DbgPrint("Mode    %x\n", Mode);
 
-    //只关注任意目录创建
     ULONG DIRECTORY = 0;
     if (CreateDisposition2 >= FILE_DIRECTORY_FILE &&
         (CreateDisposition2 / FILE_DIRECTORY_FILE) % 2 == 1)
@@ -1217,21 +1216,8 @@ FsfCreate(
         DIRECTORY = 1;
     }
     //  DbgPrint("DIRECTORY %d createflag %d \n", DIRECTORY, createflag);
-      //任意文件写入过滤
-    if (save && Mode == UserMode/*&&
-        ODesiredAccess != FILE_READ_DATA
-        & ODesiredAccess != FILE_READ_DATA | FILE_READ_ATTRIBUTES
-        && ODesiredAccess != FILE_READ_DATA | FILE_READ_EA
-        && ODesiredAccess != FILE_READ_ATTRIBUTES
-        && ODesiredAccess != FILE_READ_EA
-        && ODesiredAccess != FILE_READ_EA | FILE_READ_ATTRIBUTES
-        && GDesiredAccess != GENERIC_READ*/
-        //我们需要关注有没有设置SL_STOP_ON_SYMLINK标志 检查打开的是否是符号链接 否则无法利用
-     //   && ODesiredAccess == FILE_READ_DATA
-       //    && ODesiredAccess == FILE_READ_DATA
-      //  && (((IoStackLocation->Flags / SL_STOP_ON_SYMLINK) % 2 == 0 || Flage == 0))
-        /// 排除只能读取文件并且只能打开存在的文件
-
+      //只关注任意目录创建
+    if (save && Mode == UserMode
         && (DIRECTORY && createflag))//&& SDesiredAccess != (READ_CONTROL | SYNCHRONIZE)))
     {
 
@@ -1790,6 +1776,7 @@ FsfCreate(
 
         //ssc2是全局上下文变量，也就是测试用例的上下文而不是高权限上下文
     }
+
     else if (save && Mode == KernelMode
         //OBJ_FORCE_ACCESS_CHECK排除检查内核句柄
         && Flage % 2 != SL_FORCE_ACCESS_CHECK
@@ -1933,7 +1920,7 @@ FsfCreate(
         //     savecolse = 1;
 
     }
-    //如果在打开时删除
+    //如果在打开时删除文件
 
     else if (save && Mode == UserMode &&
         ODesiredAccess != FILE_READ_DATA
@@ -2019,7 +2006,7 @@ FsfCreate(
             strcpy(&Msg2.Data[2], buf);
 
             Msg2.Data[0] = '@';
-            Msg2.Data[1] = '2';
+            Msg2.Data[1] = '3';
 
             strcpy(&Msg2.Data[260], NAME);
             strcpy(&Msg2.Data[260] + strlen(NAME) + 2, idstr);
@@ -2085,7 +2072,7 @@ FsfCreate(
                 strcpy(&Msg2.Data[2], buf);
 
                 Msg2.Data[0] = '@';
-                Msg2.Data[1] = '2';
+                Msg2.Data[1] = '3';
 
                 strcpy(&Msg2.Data[260], NAME);
                 strcpy(&Msg2.Data[260] + strlen(NAME) + 2, idstr);
@@ -2809,28 +2796,7 @@ FsfCleanupClose(
             strcpy(&Msg4.Data[260], NAME);
             strcpy(&Msg4.Data[260] + strlen(NAME) + 2, idstr);
             status = ZwRequestWaitReplyPort(hClientPort, (PPORT_MESSAGE)&Msg4, (PPORT_MESSAGE)&Out4);
-            /*      if (save)
-                  {
-                      save = 0;*/
-                      //    StatusBlock = createFile(L"\\??\\C:\\Users\\ztl\\Desktop\\BoomUsersCL.txt", GENERIC_ALL, FILE_SHARE_VALID_FLAGS, FILE_OPEN_IF, 0, &filehand//保存句柄
-                      //    );
-                      //    /*save = 1;
-                      //}*/
-                      //    INT ret = 0;
-                      //    while (ret != STATUS_END_OF_FILE)
-                      //    {
-                      //        CHAR BUF[1024];
-                      //        ret = ZwReadFile(filehand, NULL, NULL, NULL, &StatusBlock, BUF, 1024, NULL, NULL);
-                      //    }
-                      //    ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, " boomboomboom!!!\r\n", sizeof(" boomboomboom!!!\r\n"), NULL, NULL);
-                      //    ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "   文件名 :", sizeof("   文件名 :"), NULL, NULL);
-                      //    ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, buf, strnlen(buf, 500), NULL, NULL);
-                      //    ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "   进程名 :", sizeof("   进程名 :"), NULL, NULL);
-                      //    ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, NAME, strnlen(NAME, 500), NULL, NULL);
-                      //    ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "\r\n    进程id :", sizeof("\r\n    进程id :"), NULL, NULL);
-                      //    ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, idstr, 6, NULL, NULL);
-                      //    ZwWriteFile(filehand, NULL, NULL, NULL, &StatusBlock, "\r\n", sizeof("\r\n"), NULL, NULL);
-                      //    ZwClose(filehand);
+          
         }
         SeUnlockSubjectContext(&ssc2);
     }
@@ -3583,5 +3549,4 @@ NTSTATUS MyCreateNamedPipe(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
     //WRITE_DAC 
     return g_OriginalCreateNamedPipe(DeviceObject, Irp);
 }
-
 
