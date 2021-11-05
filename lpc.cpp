@@ -688,7 +688,7 @@ BOOL TraverseDirectory(wchar_t Dir[MAX_PATH], wchar_t Dir2[MAX_PATH])
 				} 
 				HANDLE hFile = CreateFile(DirAdd,      //第一个参数:路径
 					DELETE,                       //打开方式:
-					FILE_SHARE_DELETE | FILE_SHARE_WRITE | FILE_SHARE_READ,                                  //共享模式  
+					0,                                  //共享模式:0为独占  
 					NULL,
 					OPEN_EXISTING,                      //打开已存在的文件
 					FILE_FLAG_BACKUP_SEMANTICS,         //FILE_FLAG_BACKUP_SEMANTICS表示为目录，NULL表示文件
@@ -703,7 +703,7 @@ BOOL TraverseDirectory(wchar_t Dir[MAX_PATH], wchar_t Dir2[MAX_PATH])
 			
 			if ((FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)    //如果不是文件夹
 			{
-				HANDLE hFILE = CreateFileA("C:\\Users\\ztl\\Desktop", DELETE, FILE_SHARE_DELETE | FILE_SHARE_WRITE | FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
+				HANDLE hFILE = CreateFileA("C:\\Users\\ztl\\Desktop", DELETE, 0, NULL, OPEN_EXISTING, NULL, NULL);
 				if (hFILE == INVALID_HANDLE_VALUE )
 				{
 					return 0;
