@@ -1108,7 +1108,7 @@ DWORD LpcServer(LPCWSTR pwszPortName)
 					}
 					else if (type == 2)
 					{
-						Log("C:\\Users\\ztl\\Desktop\\BoomUsersCreate2.txt", buf, 1);
+						Log("C:\\Users\\ztl\\Desktop\\BoomUsersCreate2.txt", buf, 0);
 					}
 					else if (type == 4)
 					{
