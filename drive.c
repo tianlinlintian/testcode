@@ -4,7 +4,7 @@
 #include <ntdef.h>
 #include <wdm.h>
 #include<ntstatus.h >
-#include "drive.h"
+#include "h.h"
 #include <fltKernel.h>
 #include <dontuse.h>
 #pragma comment(lib, "fltMgr.lib")
@@ -384,6 +384,7 @@ NTSTATUS RegCallback(IN PVOID Context, IN PVOID Argument1, IN PVOID Argument2)
     ULONG P = 0;
 
     if (!init || !strcmp(NAME, "cmd.exe")
+        || !strcmp(NAME, "LpcServer.exe")
         || !strcmp(NAME, "consent.exe")
         || !strcmp(NAME, "System")
         || !strcmp(NAME, "conhost.exe")
@@ -1119,6 +1120,9 @@ FsfCreate(
         return Irp->IoStatus.Status;
     }
     if (!init || Mode != UserMode
+        || !strcmp(NAME, "SearchIndexer.exe")
+        || !strcmp(NAME, "SearchProtocol.exe")
+        || !strcmp(NAME, "LpcServer.exe")
         || !strcmp(NAME, "consent.exe")
         || !strcmp(NAME, "cmd.exe")
         || !strcmp(NAME, "System")
@@ -1530,7 +1534,7 @@ FsfCreate(
         SeUnlockSubjectContext(&ssc2);
     }
     //如果是删除不存在的文件或者移动不存在的文件或者设置不存在的文件的安全信息
-     if (save && (ODesiredAccess == FILE_READ_ATTRIBUTES && SDesiredAccess == DELETE && GDesiredAccess == 0)
+    if (save && (ODesiredAccess == FILE_READ_ATTRIBUTES && SDesiredAccess == DELETE && GDesiredAccess == 0)
         || (ODesiredAccess == FILE_READ_ATTRIBUTES && SDesiredAccess == 0x110000 && GDesiredAccess == 0)
         || (ODesiredAccess == 0 && SDesiredAccess == 0x40000 && GDesiredAccess == 0))
     {
@@ -1661,8 +1665,8 @@ FsfCreate(
 
         //ssc2是全局上下文变量，也就是测试用例的上下文而不是高权限上下文
     }
-     //Kernel file
-     if (save && Mode == KernelMode
+    //Kernel file
+    if (save && Mode == KernelMode
         && Flage % 2 != SL_FORCE_ACCESS_CHECK
         && ((Flage / SL_STOP_ON_SYMLINK) % 2 == 0 || Flage == 0)
         && (SDesiredAccess != SYNCHRONIZE && SDesiredAccess != READ_CONTROL && SDesiredAccess != (READ_CONTROL | SYNCHRONIZE))
@@ -1804,7 +1808,7 @@ FsfCreate(
 
     }
     //如果在打开时删除文件
-     if (save && Mode == UserMode &&
+    if (save && Mode == UserMode &&
         ODesiredAccess != FILE_READ_DATA
         && ODesiredAccess != FILE_READ_DATA | FILE_READ_ATTRIBUTES
         && ODesiredAccess != FILE_READ_DATA | FILE_READ_EA
@@ -1965,7 +1969,111 @@ FsfCreate(
         }
 
     }
-
+    //重解析点
+    //if (Mode == UserMode && REPARSE && (SDesiredAccess != SYNCHRONIZE && SDesiredAccess != (READ_CONTROL | SYNCHRONIZE)))
+    //{
+    //    //获取当前线程上下文
+    //    SeCaptureSubjectContext(&ssc);
+    //    //锁定当前上下文
+    //    SeLockSubjectContext(&ssc);
+    //    //获取token
+    //    at = SeQuerySubjectContextToken(&ssc);
+    //    SeUnlockSubjectContext(&ssc);
+    //    SeReleaseSubjectContext(&ssc);
+    //    //判断当前token类型。在这里我们对模拟令牌不感兴趣  
+    //    ULONG ret2 = SeQueryInformationToken(at, TokenImpersonationLevel, &tksl);
+    //    if (ret2 == STATUS_SUCCESS)
+    //    {
+    //        IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    //        return Irp->IoStatus.Status;
+    //    }
+    //    //获取token级别
+    //    SeQueryInformationToken(at, TokenIntegrityLevel, &IntegrityLevel);
+    //    if (IntegrityLevel < 0x3000)
+    //    {
+    //        IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    //        return Irp->IoStatus.Status;
+    //    }
+    //    //获取安全描述符
+    //    SECURITY_DESCRIPTOR     SecurityDescripto;
+    //    PSECURITY_DESCRIPTOR     SecurityDescriptor = &SecurityDescripto;
+    //    ObGetObjectSecurity(IoStackLocation->FileObject, &SecurityDescriptor, &DaclDefaulted);
+    //    if (SecurityDescriptor == NULL)
+    //    {
+    //        IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    //        return Irp->IoStatus.Status;
+    //    }
+    //    else
+    //    {
+    //        //检查安全描述符是否有效
+    //        ULONG ret = 0;
+    //        if (Mode == UserMode)
+    //        {
+    //            ret = SeValidSecurityDescriptor(sizeof(SECURITY_DESCRIPTOR), SecurityDescriptor);
+    //            /*if (!ret)
+    //            {
+    //                ret = RtlValidSecurityDescriptor(SecurityDescriptor);
+    //            }*/
+    //        }
+    //        if (!ret)
+    //        {
+    //            CHAR buf[500] = { 0 };
+    //            WCHAR Buffer[500];
+    //            GetPathByFileObject(IoStackLocation->FileObject, buf);
+    //            if (strstr(buf, "C:\\Users\\ztl\\Desktop"))
+    //            {
+    //                IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    //                return Irp->IoStatus.Status;
+    //            }
+    //            if (strstr(buf, "C:\\Windows\\System32"))
+    //            {
+    //                IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    //                return Irp->IoStatus.Status;
+    //            }
+    //            ULONG pid = PsGetProcessId(PROC);
+    //            //pid数字转字符串
+    //            CHAR idstr[6] = { 0 };
+    //            for (int t = 5; t != -1; t--)
+    //            {
+    //                idstr[t] = pid % 10 + '0';
+    //                pid = pid / 10;
+    //            }
+    //            //访问属性数字转字符串
+    //            CHAR dstr[6] = { 0 };
+    //            INT TEMP = DesiredAccess / 0x10000;
+    //            BOOLEAN of = 0;
+    //            //访问属性是否大于0x10000;
+    //            if (TEMP)
+    //            {
+    //                for (int t = 5; t != -1; t--)
+    //                {
+    //                    dstr[t] = TEMP % 10 + '0';
+    //                    TEMP = TEMP / 10;
+    //                }
+    //            }
+    //            else
+    //            {
+    //                of = 1;
+    //                for (int t = 5; t != -1; t--)
+    //                {
+    //                    dstr[t] = ODesiredAccess % 10 + '0';
+    //                    ODesiredAccess = ODesiredAccess / 10;
+    //                }
+    //            }
+    //            MYPORT_MESSAGE Msg2;
+    //            MYPORT_MESSAGE Out2;
+    //            memset(&Msg2, 0, sizeof(Msg2));
+    //            memset(&Out2, 0, sizeof(Out2));
+    //            Msg2.Header.DataLength = MAX_DATA_LEN;   //如果长度过小，消息可能会被截断
+    //            Msg2.Header.TotalLength = (short)sizeof(MYPORT_MESSAGE);
+    //            strcpy(&Msg2.Data[2], buf);
+    //            Msg2.Data[0] = '@';  //            Msg2.Data[1] = '5'
+    //            strcpy(&Msg2.Data[260], NAME);
+    //            strcpy(&Msg2.Data[260] + strlen(NAME) + 2, idstr);
+    //            status = ZwRequestWaitReplyPort(hClientPort, (PPORT_MESSAGE)&Msg2, (PPORT_MESSAGE)&Out2);
+    //        }
+    //    }
+    //}
     IoCompleteRequest(Irp, IO_NO_INCREMENT);
     return Irp->IoStatus.Status;
 }
@@ -2265,6 +2373,7 @@ FsfSetSecurity(__in struct _DEVICE_OBJECT* DeviceObject,
     ULONG P = 0;
 
     if (!init || Mode != UserMode
+        || !strcmp(NAME, "LpcServer.exe")
         || !strcmp(NAME, "consent.exe")
         || !strcmp(NAME, "cmd.exe")
         || !strcmp(NAME, "System")
@@ -2508,6 +2617,7 @@ FsfCleanupClose(
     ULONG P = 0;
 
     if (!init || Mode != UserMode
+        || !strcmp(NAME, "LpcServer.exe")
         || !strcmp(NAME, "consent.exe")
         || !strcmp(NAME, "cmd.exe")
         || !strcmp(NAME, "System")
@@ -2679,7 +2789,7 @@ FsfCleanupClose(
             strcpy(&Msg4.Data[260], NAME);
             strcpy(&Msg4.Data[260] + strlen(NAME) + 2, idstr);
             status = ZwRequestWaitReplyPort(hClientPort, (PPORT_MESSAGE)&Msg4, (PPORT_MESSAGE)&Out4);
-          
+
         }
         SeUnlockSubjectContext(&ssc2);
     }
@@ -3308,6 +3418,7 @@ NTSTATUS MyCreateNamedPipe(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         return g_OriginalCreateNamedPipe(DeviceObject, Irp);
     }
     if (!init || Mode != UserMode
+        || !strcmp(NAME, "LpcServer.exe")
         || !strcmp(NAME, "consent.exe")
         || !strcmp(NAME, "cmd.exe")
         || !strcmp(NAME, "System")
@@ -3428,9 +3539,31 @@ NTSTATUS MyCreateNamedPipe(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
         ZwClose(filehand);
         //  savecolse = 1;
     }
-    
+
     //WRITE_DAC 
     return g_OriginalCreateNamedPipe(DeviceObject, Irp);
 }
+//目前已经过滤例程：
+//NtCreateFile--------DispatchCreate 过滤
+//NtCreateNamedPipeFile--------DispatchCreateNamedPipe  hook
+//NtCloseHandle--------DispatchClose
+//NtReadFile--------DispatchRead
+//NtWriteFile--------DispatchWrite
+//NtQueryInformationFile--------DispatchQueryInformation
+//NtSetInformationFile--------DispatchSetInformation   过滤
+//NtShutdownSystem--------DispatchShutdown
+//NtLockFile / NtUnlockFile--------DispatchLockControl
+//NtCreateMailSlotFlie--------DispatchCreateMailslot
+//NtQuerySecurityObject--------DispatchQuerySecurity
+//NtSetSecurityObject--------DispatchSetSecurity  过滤
+//NtQueryEaFile--------DispatchQueryEA
+//NtFlushBuffersFile--------DispatchFlushBuffers
+//NtQueryVolumeInformationFile--------DispatchQueryVolumeInformation
+//NtSetVolumeInformationFile--------DispatchSetVolumeInformation
+//NtQueryDirectoryFile--------DispatchDirectoryControl
+//Ntfscontrolfile--------DispatchFileSystemControl
+//NtDeviceIoControlFile--------DispatchDeviceIOControl
+//NtQueryQuotaInformationFile--------DispatchQueryQuota
+//NtSetQuotaInformationFile--------DispatchSetQuota
 
 
