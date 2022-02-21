@@ -364,6 +364,10 @@ int EnableFileAccountPrivilege(const CHAR* pszPath, const CHAR* pszAccount)
 		{
 			bSuccess = FALSE;
 		}
+		
+		//还原
+		::SetNamedSecurityInfoA((CHAR*)pszPath, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, NULL, NULL, pOldDacl, NULL)
+		
 	} while (FALSE);
 
 	if (NULL != pNewDacl)
