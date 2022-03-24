@@ -23,7 +23,7 @@
 #define DIRECTORY_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED | 0xF)
 
 #define SYMBOLIC_LINK_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED | 0x1)
- 
+
 
 
 void SetRegPrivilege(LPSTR NAME)
@@ -157,7 +157,7 @@ HANDLE GetProcessHandle(LPCWSTR lpName)
 	HANDLE hProcess = NULL;
 	HANDLE hProcessSnap;
 	PROCESSENTRY32 pe32;
-	
+
 	// Take a snapshot of all processes in the system.
 	hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	if (hProcessSnap == INVALID_HANDLE_VALUE)
@@ -216,13 +216,13 @@ NTSTATUS
 NTSTATUS
 (NTAPI* ZwReplyWaitReceivePort)(
 	__in HANDLE PortHandle,
-	__out_opt PVOID *PortContext,
+	__out_opt PVOID* PortContext,
 	__in_opt PPORT_MESSAGE ReplyMessage,
 	__out PPORT_MESSAGE ReceiveMessage
 	);
 
 NTSTATUS
-(NTAPI*	ZwAcceptConnectPort)(
+(NTAPI* ZwAcceptConnectPort)(
 	__out PHANDLE PortHandle,
 	__in_opt PVOID PortContext,
 	__in PPORT_MESSAGE ConnectionRequest,
@@ -243,7 +243,7 @@ NTSTATUS
 	);
 
 NTSTATUS
-(NTAPI*	ZwConnectPort)(
+(NTAPI* ZwConnectPort)(
 	__out PHANDLE PortHandle,
 	__in PUNICODE_STRING PortName,
 	__in PSECURITY_QUALITY_OF_SERVICE SecurityQos,
@@ -273,9 +273,9 @@ NTSTATUS
 	);
 
 NTSTATUS
-(NTAPI  *ZwClose)(
+(NTAPI* ZwClose)(
 	HANDLE Handle
-);
+	);
 
 BOOL LpcInit()
 {
@@ -318,7 +318,7 @@ BOOL LpcInit()
 
 	if (!RtlInitUnicodeString || !ZwCreatePort ||
 		!ZwListenPort || !ZwReplyWaitReceivePort || !ZwAcceptConnectPort ||
-		!ZwCompleteConnectPort || !ZwReplyPort || !ZwConnectPort || !ZwRequestWaitReplyPort || 
+		!ZwCompleteConnectPort || !ZwReplyPort || !ZwConnectPort || !ZwRequestWaitReplyPort ||
 		!NtCreateSection || !ZwClose)
 	{
 		return FALSE;
@@ -364,18 +364,18 @@ int EnableFileAccountPrivilege(const CHAR* pszPath, const CHAR* pszAccount)
 		{
 			bSuccess = FALSE;
 		}
-		
+
 		//还原
-		::SetNamedSecurityInfoA((CHAR*)pszPath, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, NULL, NULL, pOldDacl, NULL)
-		
+		::SetNamedSecurityInfoA((CHAR*)pszPath, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, NULL, NULL, pOldDacl, NULL);
+
 	} while (FALSE);
 
-	if (NULL != pNewDacl)
-	{
-		::LocalFree(pNewDacl);
-	}
+		if (NULL != pNewDacl)
+		{
+			::LocalFree(pNewDacl);
+		}
 
-	return bSuccess;
+		return bSuccess;
 }
 
 
@@ -682,14 +682,14 @@ BOOL TraverseDirectory(wchar_t Dir[MAX_PATH], wchar_t Dir2[MAX_PATH])
 				StringCchCat(DirAdd, MAX_PATH, TEXT("\\"));
 				StringCchCat(DirAdd, MAX_PATH, FindFileData.cFileName);       //拼接得到此文件夹的完整路径
 				//如果是这次操作irp的文件目录则直接无视
-				if (!wcscmp(DirAdd,Dir2))
+				if (!wcscmp(DirAdd, Dir2))
 				{
 					continue;
 				}
-				if (TraverseDirectory(DirAdd, Dir2)==0) //实现递归调用
+				if (TraverseDirectory(DirAdd, Dir2) == 0) //实现递归调用
 				{
 					return 0;
-				} 
+				}
 				HANDLE hFile = CreateFileW(DirAdd,      //第一个参数:路径
 					DELETE,                       //打开方式:
 					0,                                  //共享模式:0为独占  
@@ -703,7 +703,7 @@ BOOL TraverseDirectory(wchar_t Dir[MAX_PATH], wchar_t Dir2[MAX_PATH])
 				}
 				CloseHandle(hFile);
 			}
-			
+
 			if ((FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)    //如果不是文件夹
 			{
 				WCHAR path[1000] = { 0 };
@@ -711,7 +711,7 @@ BOOL TraverseDirectory(wchar_t Dir[MAX_PATH], wchar_t Dir2[MAX_PATH])
 				wcscat(path, L"\\");
 				wcscat(path, FindFileData.cFileName);
 				HANDLE hFILE = CreateFileW(path, DELETE, 0, NULL, OPEN_EXISTING, NULL, NULL);
-				if (hFILE == INVALID_HANDLE_VALUE )
+				if (hFILE == INVALID_HANDLE_VALUE)
 				{
 					return 0;
 				}
@@ -758,7 +758,7 @@ int checkstr(char* s, char* t, int flag, int lenstr)
 	return 0;
 }
 
-VOID Log(const CHAR* path, const CHAR* buf,ULONG Type) {
+VOID Log(const CHAR* path, const CHAR* buf, ULONG Type) {
 	HANDLE hd = CreateFileA(path, GENERIC_WRITE | GENERIC_READ, FILE_SHARE_DELETE | FILE_SHARE_WRITE | FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	DWORD dwHigh;
 	SetFilePointer(hd, 0, NULL, FILE_END);
@@ -772,18 +772,18 @@ VOID Log(const CHAR* path, const CHAR* buf,ULONG Type) {
 	WriteFile(hd, (char*)&buf[260] + strlen((char*)&buf[260]) + 2, 6, &dwWritenSize, NULL);
 	switch (buf[MAX_DATA_LEN - 2])
 	{
-		case DACL_SECURITY_INFORMATION:
-			WriteFile(hd, " 访问控制列表(DACL)", sizeof(" 访问控制列表(DACL)"), &dwWritenSize, NULL);
-			break;
-		case GROUP_SECURITY_INFORMATION:
-			WriteFile(hd, " 所属组", sizeof(" 所属组"), &dwWritenSize, NULL);
-			break;
-		case OWNER_SECURITY_INFORMATION:
-			WriteFile(hd, " 拥有者", sizeof(" 拥有者"), &dwWritenSize, NULL);
-			break;
-		case SACL_SECURITY_INFORMATION:
-			WriteFile(hd, " 审核控制列表(SACL)", sizeof(" 审核控制列表(SACL)"), &dwWritenSize, NULL);
-			break;
+	case DACL_SECURITY_INFORMATION:
+		WriteFile(hd, " 访问控制列表(DACL)", sizeof(" 访问控制列表(DACL)"), &dwWritenSize, NULL);
+		break;
+	case GROUP_SECURITY_INFORMATION:
+		WriteFile(hd, " 所属组", sizeof(" 所属组"), &dwWritenSize, NULL);
+		break;
+	case OWNER_SECURITY_INFORMATION:
+		WriteFile(hd, " 拥有者", sizeof(" 拥有者"), &dwWritenSize, NULL);
+		break;
+	case SACL_SECURITY_INFORMATION:
+		WriteFile(hd, " 审核控制列表(SACL)", sizeof(" 审核控制列表(SACL)"), &dwWritenSize, NULL);
+		break;
 	}
 	if (Type)
 	{
@@ -858,7 +858,7 @@ DWORD LpcServer(LPCWSTR pwszPortName)
 	HANDLE tokenHandle = NULL;
 
 	//模拟explorer.exe
-	HANDLE processHandle=GetProcessHandle(L"explorer.exe");
+	HANDLE processHandle = GetProcessHandle(L"explorer.exe");
 
 
 	// 获取指定进程的句柄令牌
@@ -911,7 +911,7 @@ DWORD LpcServer(LPCWSTR pwszPortName)
 			printf("LpcReplyWaitReceivePort failed: 0x%08x\n", status);
 			break;
 		}
-	
+
 		msg_type = RecvPortMsg.Type;
 		/*printf("msg_type: %d \n", msg_type);
 		printf("RecvPortMsg.DataLength %d\n", RecvPortMsg.DataLength);
@@ -919,14 +919,14 @@ DWORD LpcServer(LPCWSTR pwszPortName)
 		printf("RecvPortMsg.UniqueProcess:%zu\n", (SIZE_T)RecvPortMsg.ClientId.UniqueProcess);
 		printf("RecvPortMsg.UniqueThread:%zu\n", (SIZE_T)RecvPortMsg.ClientId.UniqueThread);*/
 
-		switch(msg_type)
+		switch (msg_type)
 		{
 		case LPC_CONNECTION_REQUEST:
 			//printf("recv Msg: %s \n", (LPSTR)RecvPortMsg.Data);
 
 			// 填写发送数据.
 			lstrcpyA((LPSTR)RecvPortMsg.Data, "reply");
-			
+
 			// 获得连接请求.
 #ifdef TEST_VIEW
 			status = ZwAcceptConnectPort(
@@ -950,11 +950,11 @@ DWORD LpcServer(LPCWSTR pwszPortName)
 				printf("LpcAcceptConnectPort failed, status=%x\n", status);
 				break;
 			}
-		//	printf("LpcAcceptConnectPort ok\n");
+			//	printf("LpcAcceptConnectPort ok\n");
 
-			//printf("m_ClientView.ViewSize: %d\n", m_ClientView.ViewSize);
-			//printf("m_ClientView.Length: %d\n", m_ClientView.Length);
-			//printf("m_ClientView.ViewBase: %p\n", m_ClientView.ViewBase);
+				//printf("m_ClientView.ViewSize: %d\n", m_ClientView.ViewSize);
+				//printf("m_ClientView.Length: %d\n", m_ClientView.Length);
+				//printf("m_ClientView.ViewBase: %p\n", m_ClientView.ViewBase);
 
 			status = ZwCompleteConnectPort(hPortClient);
 			if (status != 0) {
@@ -972,20 +972,20 @@ DWORD LpcServer(LPCWSTR pwszPortName)
 			char Dir[0x1000];
 			strcpy(Dir, (char*)&RecvPortMsg.Data[2]);
 			ULONG type = 0;
-			if (RecvPortMsg.Data[0]=='@')
+			if (RecvPortMsg.Data[0] == '@')
 			{
 				if (RecvPortMsg.Data[1] == '1')
 				{
 					printf("[+] 高权限进程正在创建可写目录: %s \n", (char*)&RecvPortMsg.Data[2]);
 					type = 1;
 				}
-				else if(RecvPortMsg.Data[1] == '2')
+				else if (RecvPortMsg.Data[1] == '2')
 				{
 					printf("[+] 无法在内核判断的目录: %s \n", (char*)&RecvPortMsg.Data[2]);
 					type = 2;
 
 				}
-				else if(RecvPortMsg.Data[1] == '3')
+				else if (RecvPortMsg.Data[1] == '3')
 				{
 					printf("[+] 高权限进程正在删除文件: %s \n", (char*)&RecvPortMsg.Data[2]);
 					type = 3;
@@ -1006,8 +1006,8 @@ DWORD LpcServer(LPCWSTR pwszPortName)
 					}
 				}
 				ULONG save = 0;
-				
-				printf("[+] 检查是否可以对%s设置符号链接\n",Dir);
+
+				printf("[+] 检查是否可以对%s设置符号链接\n", Dir);
 
 				//是否能创建该文件所在的目录 如果目录已存在再进一步判断
 				HANDLE hFILE = 0;
@@ -1015,7 +1015,7 @@ DWORD LpcServer(LPCWSTR pwszPortName)
 				CreateDirectoryA(Dir, 0);
 				ULONG er = GetLastError();
 				//如果文件所在目录不存在那么则往上级一层层创建直到创建成功或者提示拒绝访问
-				if (er==2||er==3)
+				if (er == 2 || er == 3)
 				{
 					while (true)
 					{
@@ -1031,10 +1031,10 @@ DWORD LpcServer(LPCWSTR pwszPortName)
 						ULONG er = GetLastError();
 						if (er != 2 && er != 3)
 						{
-						//	printf("%d\n", er);
+							//	printf("%d\n", er);
 							break;
 						}
-						else if (er==5)
+						else if (er == 5)
 						{
 							printf("[-] 该文件所在目录没有写入权限 不做记录\n");
 							memset(RecvPortMsg.Data, 0x00, MAX_DATA_LEN - 1);
@@ -1043,7 +1043,7 @@ DWORD LpcServer(LPCWSTR pwszPortName)
 						}
 					}
 				}
-				if (er != 0&&er != 5)
+				if (er != 0 && er != 5)
 				{
 					hFILE = CreateFileA(Dir, DELETE, FILE_SHARE_DELETE | FILE_SHARE_WRITE | FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 
@@ -1097,7 +1097,7 @@ DWORD LpcServer(LPCWSTR pwszPortName)
 				{
 					save = 1;
 				}
-				if (save==1)
+				if (save == 1)
 				{
 					CHAR buf[MAX_DATA_LEN];
 					memcpy(&buf[2], (char*)&RecvPortMsg.Data[2], MAX_DATA_LEN - 2);
@@ -1134,9 +1134,9 @@ DWORD LpcServer(LPCWSTR pwszPortName)
 			}
 
 
-		//	printf("ZwReplyPort ok\n");
+			//	printf("ZwReplyPort ok\n");
 		}
-			break;
+		break;
 		case LPC_PORT_CLOSED:
 			if (hPortClient != INVALID_HANDLE_VALUE)
 			{
@@ -1175,7 +1175,7 @@ DWORD LpcClient(LPCWSTR pwszPortName)
 		&m_SectionSize,
 		PAGE_READWRITE,
 		SEC_COMMIT,
-		NULL);	
+		NULL);
 	if (!NT_SUCCESS(status))
 	{
 		printf("ZwCreateSection failed, st=%x\n", status);
@@ -1222,11 +1222,11 @@ DWORD LpcClient(LPCWSTR pwszPortName)
 		ConnectDataBuffer,
 		&Size);
 #else
-	status = ZwConnectPort(&hClientPort, 
-		&ustrPortName, 
+	status = ZwConnectPort(&hClientPort,
+		&ustrPortName,
 		&sqos,
 		NULL/*&m_ClientView*/,
-		NULL/*&m_ServerView*/, 
+		NULL/*&m_ServerView*/,
 		&max_msglen,
 		ConnectDataBuffer,
 		&Size);
@@ -1239,7 +1239,7 @@ DWORD LpcClient(LPCWSTR pwszPortName)
 
 	printf("Connect success.\n");
 	printf("ConnectDataBuffer: %s\n", ConnectDataBuffer);
-	
+
 	MYPORT_MESSAGE Msg;
 	MYPORT_MESSAGE Out;
 
